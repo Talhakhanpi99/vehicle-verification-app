@@ -1,0 +1,238 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Vehicle Verification Portal</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="{{ url_for('static', filename='css/offline_bootstrap.css') }}" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="{{ url_for('static', filename='css/offline_icons.css') }}" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header Section -->
+    <div class="container-fluid bg-primary text-white text-center py-4">
+        <div class="bismillah">Ø¨ÙØ³Ù’Ù…Ù Ø§Ù„Ù„Ù‡Ù Ø§Ù„Ø±ÙŽÙ‘Ø­Ù’Ù…Ù°Ù†Ù Ø§Ù„Ø±ÙŽÙ‘Ø­ÙÙŠÙ’Ù…Ù</div>
+        <h1 class="display-4 fw-bold mt-2">Collectorate of Customs</h1>
+        <h2 class="h3 fw-light">Vehicle Verification Portal</h2>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/guide">User Guide</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/faq">FAQs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/contact">Contact</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Content -->
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow-lg">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0"><i class="fas fa-envelope me-2"></i>Contact Us</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h4 class="text-primary mb-4">Get In Touch</h4>
+                                <p>Have questions, suggestions, or need assistance with the Vehicle Verification Portal? We're here to help!</p>
+                                
+                                <form id="contactForm">
+                                    <div class="mb-3">
+                                        <label for="name" class="form-label">Your Name</label>
+                                        <input type="text" class="form-control" id="name" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email Address</label>
+                                        <input type="email" class="form-control" id="email" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="subject" class="form-label">Subject</label>
+                                        <select class="form-select" id="subject" required>
+                                            <option value="" selected disabled>Select a subject</option>
+                                            <option value="general">General Inquiry</option>
+                                            <option value="technical">Technical Issue</option>
+                                            <option value="suggestion">Suggestion</option>
+                                            <option value="data">Data Accuracy Concern</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="message" class="form-label">Message</label>
+                                        <textarea class="form-control" id="message" rows="5" required></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Send Message</button>
+                                </form>
+                                
+                                <div id="formSuccess" class="alert alert-success mt-3 d-none">
+                                    <i class="fas fa-check-circle me-2"></i>Thank you for your message! We'll get back to you as soon as possible.
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-primary">Contact Information</h5>
+                                        
+                                        <div class="contact-item mb-4">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="fas fa-user-circle text-primary me-2"></i>
+                                                <h6 class="mb-0">Developer</h6>
+                                            </div>
+                                            <p class="mb-0 small">Talha Ghayas Khan</p>
+                                        </div>
+                                        
+                                        <div class="contact-item mb-4">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="fas fa-phone-alt text-primary me-2"></i>
+                                                <h6 class="mb-0">Phone</h6>
+                                            </div>
+                                            <p class="mb-0 small">0310-8022930</p>
+                                        </div>
+                                        
+                                        <div class="contact-item mb-4">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="fas fa-envelope text-primary me-2"></i>
+                                                <h6 class="mb-0">Email</h6>
+                                            </div>
+                                            <p class="mb-0 small">Talhakhanpi99@gmail.com</p>
+                                        </div>
+                                        
+                                        <div class="contact-item">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <i class="fas fa-clock text-primary me-2"></i>
+                                                <h6 class="mb-0">Response Time</h6>
+                                            </div>
+                                            <p class="mb-0 small">We typically respond within 24-48 hours</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card mt-4 border-warning">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Important Note</h6>
+                                        <p class="small mb-0">For official customs inquiries or to report suspicious activities, please contact the Collectorate of Customs directly through official channels.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- FAQ Preview -->
+                <div class="card shadow-lg mt-4">
+                    <div class="card-body">
+                        <h5 class="text-primary mb-4">Common Questions</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="d-flex mb-3">
+                                    <i class="fas fa-question-circle text-primary me-2 mt-1"></i>
+                                    <div>
+                                        <h6>How accurate is the verification data?</h6>
+                                        <p class="small text-muted">The data is sourced from Pakistan Customs records and is updated regularly.</p>
+                                    </div>
+                                </div>
+                                <div class="d-flex mb-3">
+                                    <i class="fas fa-question-circle text-primary me-2 mt-1"></i>
+                                    <div>
+                                        <h6>What if my vehicle is not found?</h6>
+                                        <p class="small text-muted">Check our <a href="/faq">FAQs</a> for troubleshooting steps and alternative verification methods.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex mb-3">
+                                    <i class="fas fa-question-circle text-primary me-2 mt-1"></i>
+                                    <div>
+                                        <h6>Is my search information stored?</h6>
+                                        <p class="small text-muted">No, we do not store personal information or search queries. See our <a href="/privacy">Privacy Policy</a>.</p>
+                                    </div>
+                                </div>
+                                <div class="d-flex mb-3">
+                                    <i class="fas fa-question-circle text-primary me-2 mt-1"></i>
+                                    <div>
+                                        <h6>Can I verify commercial vehicles?</h6>
+                                        <p class="small text-muted">Yes, the portal supports verification of all types of imported vehicles.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="/faq" class="btn btn-outline-primary">View All FAQs</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="container-fluid bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0">Developed by: Talha Ghayas Khan</p>
+                    <small>For improvements and suggestions</small>
+                    <p><small>Contact: 03108022930</small></p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="footer-links">
+                        <a href="/guide" class="text-white me-3">User Guide</a>
+                        <a href="/faq" class="text-white me-3">FAQs</a>
+                        <a href="/about" class="text-white me-3">About</a>
+                        <a href="/contact" class="text-white me-3">Contact</a>
+                        <a href="/privacy" class="text-white">Privacy</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="{{ url_for('static', filename='js/offline_ui.js') }}"></script>
+    
+    <!-- Contact Form Script -->
+    <script>
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // In a real implementation, you would send the form data to your server
+            // For this example, we'll just show a success message
+            document.getElementById('formSuccess').classList.remove('d-none');
+            document.getElementById('contactForm').reset();
+            
+            // Scroll to success message
+            document.getElementById('formSuccess').scrollIntoView({ behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>

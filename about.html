@@ -1,0 +1,236 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQs - Vehicle Verification Portal</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="{{ url_for('static', filename='css/offline_bootstrap.css') }}" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="{{ url_for('static', filename='css/offline_icons.css') }}" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header Section -->
+    <div class="container-fluid bg-primary text-white text-center py-4">
+        <div class="bismillah">Ø¨ÙØ³Ù’Ù…Ù Ø§Ù„Ù„Ù‡Ù Ø§Ù„Ø±ÙŽÙ‘Ø­Ù’Ù…Ù°Ù†Ù Ø§Ù„Ø±ÙŽÙ‘Ø­ÙÙŠÙ’Ù…Ù</div>
+        <h1 class="display-4 fw-bold mt-2">Collectorate of Customs</h1>
+        <h2 class="h3 fw-light">Vehicle Verification Portal</h2>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/guide">User Guide</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/faq">FAQs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/contact">Contact</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Content -->
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow-lg">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0"><i class="fas fa-question-circle me-2"></i>Frequently Asked Questions</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="faqAccordion">
+                            <!-- FAQ Item 1 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading1">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse1">
+                                        What does it mean if my vehicle is not found in the database?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        If your vehicle is not found in the database, it could mean:
+                                        <ul>
+                                            <li>The vehicle has not completed customs clearance</li>
+                                            <li>The vehicle was imported through unofficial channels</li>
+                                            <li>There might be an error in the chassis number you entered</li>
+                                            <li>The vehicle's data has not been updated in the system yet</li>
+                                        </ul>
+                                        We recommend double-checking the chassis number and trying again. If the problem persists, contact customs officials for clarification.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ Item 2 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading2">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse2">
+                                        Is this tool official?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        This tool uses publicly available data from Pakistan Customs for verification purposes. While it provides accurate information based on customs records, it is not the official government website. For official verification, please contact the Collectorate of Customs directly.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ Item 3 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading3">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse3">
+                                        How often is the data updated?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        The data is updated regularly based on Pakistan Customs records. The current database is updated till 15 OCT 2023 as indicated on the homepage. We strive to keep the information as current as possible, but there may be a delay between customs processing and database updates.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ Item 4 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading4">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse4">
+                                        Is my search data stored or private?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        We value your privacy. Search queries are not stored permanently on our servers. The verification process is anonymous, and we do not collect personal information during searches. For more details, please refer to our <a href="/privacy">Privacy Policy</a>.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ Item 5 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading5">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse5">
+                                        Can I rely 100% on the verification results?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        While we strive for accuracy, the verification results should be used as a reference rather than absolute proof. There may be rare cases of data discrepancies or delays in updates. For critical decisions like vehicle purchases, we recommend cross-verifying with official customs channels.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ Item 6 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading6">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse6">
+                                        What should I do if the verification fails?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        If verification fails:
+                                        <ol>
+                                            <li>Double-check the chassis number for accuracy</li>
+                                            <li>Try alternative search methods (GD number, IGM number, etc.)</li>
+                                            <li>Contact the seller for clarification</li>
+                                            <li>Reach out to customs officials for official verification</li>
+                                        </ol>
+                                        Do not proceed with the purchase until you have confirmed the vehicle's legal status.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ Item 7 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading7">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse7">
+                                        What documents do I need for vehicle verification?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse7" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        For verification through this portal, you typically need:
+                                        <ul>
+                                            <li>Vehicle chassis number (VIN)</li>
+                                            <li>Or GD number (Goods Declaration)</li>
+                                            <li>Or IGM number (Import General Manifest)</li>
+                                            <li>Or BL number (Bill of Lading)</li>
+                                        </ul>
+                                        These identifiers can usually be found on your vehicle's import documents or registration papers.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ Item 8 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqHeading8">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse8">
+                                        Is there a fee for using this verification service?
+                                    </button>
+                                </h2>
+                                <div id="faqCollapse8" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        No, this verification service is provided free of charge to help citizens verify the customs status of vehicles. There are no hidden fees or charges for using this portal.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-5">
+                            <div class="alert alert-info">
+                                <h5><i class="fas fa-info-circle me-2"></i>Still Have Questions?</h5>
+                                <p class="mb-0">If you couldn't find the answer to your question in our FAQs, please feel free to <a href="/contact">contact us</a> directly. We're here to help!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="container-fluid bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0">Developed by: Talha Ghayas Khan</p>
+                    <small>For improvements and suggestions</small>
+                    <p><small>Contact: 03108022930</small></p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="footer-links">
+                        <a href="/guide" class="text-white me-3">User Guide</a>
+                        <a href="/faq" class="text-white me-3">FAQs</a>
+                        <a href="/about" class="text-white me-3">About</a>
+                        <a href="/contact" class="text-white me-3">Contact</a>
+                        <a href="/privacy" class="text-white">Privacy</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="{{ url_for('static', filename='js/offline_ui.js') }}"></script>
+</body>
+</html>

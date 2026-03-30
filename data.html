@@ -1,0 +1,174 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Record Details - Vehicle Verification Portal</title>
+    <link href="{{ url_for('static', filename='css/offline_bootstrap.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/offline_icons.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container-fluid bg-primary text-white py-3">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <button onclick="window.history.back()" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Results
+                    </button>
+                </div>
+                <div class="col-md-6 text-end">
+                    <h4 class="mb-0">Record Details</h4>
+                    <small>Source: {{ file }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <button onclick="captureScreenshot()" class="btn btn-success me-2">
+                            <i class="fas fa-camera me-2"></i>Save / Screenshot
+                        </button>
+                        <button onclick="shareViaWhatsApp()" class="btn btn-warning me-2">
+                            <i class="fab fa-whatsapp me-2"></i>Share Record
+                        </button>
+                        <button onclick="window.print()" class="btn btn-info">
+                            <i class="fas fa-print me-2"></i>Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-lg" id="data-content">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-database me-2"></i>Complete Record Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="data-card compact">
+                    {% for key, value in data.items() %}
+                    <div class="data-field">
+                        <span class="data-label">{{ key }}:</span>
+                        <span class="data-value">
+                            {% if value is none or value|string|lower == 'nan' or value|string|lower == 'nat' %}
+                                <em class="text-muted">Not Available</em>
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body text-center">
+                <div class="verification-stamp">
+                    <i class="fas fa-check-circle fa-3x text-success mb-2"></i>
+                    <p class="mb-0 text-muted">Verified by Collectorate of Customs</p>
+                    <small class="text-muted">Verification Date: {{ now.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/offline_ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        function getRecordText() {
+            const lines = [];
+            document.querySelectorAll('.data-field').forEach(field => {
+                const label = field.querySelector('.data-label')?.innerText.trim() || '';
+                const value = field.querySelector('.data-value')?.innerText.trim() || '';
+                lines.push(`${label} ${value}`.trim());
+            });
+            return lines.join('\n');
+        }
+
+        function captureScreenshot() {
+            window.print();
+            showNotification('Use your phone screenshot or Print to PDF to save this record offline.', 'info');
+        }
+
+        function shareViaWhatsApp() {
+            const shareText = `Customs Vehicle Verification\n\n${getRecordText()}`;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Customs Vehicle Verification',
+                    text: shareText
+                }).then(() => {
+                    showNotification('Record shared successfully.', 'success');
+                }).catch(() => {
+                    fallbackShare(shareText);
+                });
+                return;
+            }
+
+            fallbackShare(shareText);
+        }
+
+        function fallbackShare(shareText) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    showNotification('Record copied to clipboard. You can paste it into WhatsApp or any other app.', 'success');
+                }).catch(() => {
+                    showNotification('Unable to access the clipboard on this device.', 'warning');
+                });
+                return;
+            }
+
+            showNotification('Sharing is not available in this WebView. Use Print or your device screenshot instead.', 'warning');
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+            `;
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3500);
+        }
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @media print {
+                .container-fluid.bg-primary,
+                .btn,
+                .card:not(#data-content) {
+                    display: none !important;
+                }
+                #data-content {
+                    box-shadow: none !important;
+                    border: 1px solid #000 !important;
+                }
+                body {
+                    background: white !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
