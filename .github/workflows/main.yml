@@ -38,6 +38,7 @@ jobs:
       - name: Build APK with Buildozer
         # This will automatically accept Android SDK licenses and build the APK
         run: |
+          buildozer android clean
           yes | buildozer android debug
 
       - name: Upload APK Artifact
