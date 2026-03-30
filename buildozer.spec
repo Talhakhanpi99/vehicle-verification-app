@@ -1,4 +1,4 @@
-﻿[app]
+[app]
 title = PRAAL Offline
 package.name = praaloffline
 package.domain = com.praal
