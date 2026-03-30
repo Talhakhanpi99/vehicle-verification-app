@@ -33,7 +33,7 @@ jobs:
 
       - name: Install Buildozer & Cython
         run: |
-          pip install --upgrade buildozer cython virtualenv
+          pip install --upgrade buildozer "cython<3.0" virtualenv
 
       - name: Build APK with Buildozer
         # This will automatically accept Android SDK licenses and build the APK
