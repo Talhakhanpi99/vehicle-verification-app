@@ -1,13 +1,13 @@
+# mobile_app/buildozer.spec
 [app]
 title = PRAAL Offline
 package.name = praaloffline
 package.domain = com.praal
 source.dir = .
-source.include_exts = py,html,css,js,db,sqlite,txt,png,jpg,kv
-source.include_patterns = templates/*,templates/**/*,static/*,static/**/*,database/*,database/**/*
+source.include_exts = py,kv,png,jpg,jpeg,txt,html,css,js,db,sqlite
 source.exclude_dirs = .buildozer,bin
 version = 0.1.0
-requirements = python3, flask, werkzeug, jinja2, markupsafe, itsdangerous, click, blinker, sqlite3
+requirements = python3,flask,sqlite3
 orientation = portrait
 fullscreen = 1
 android.permissions = INTERNET
