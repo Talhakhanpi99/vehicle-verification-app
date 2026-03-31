@@ -1,0 +1,36 @@
+﻿{% extends "base.html" %}
+
+{% block title %}FAQ - PRAAL Offline Vehicle Verification{% endblock %}
+
+{% block content %}
+<section class="page-block" data-shell-card>
+    <span class="section-badge"><i class="fas fa-circle-question"></i> Frequently Asked Questions</span>
+    <h2 class="page-title mt-3">Common questions from buyers, reviewers, and field users</h2>
+    <p class="page-copy mt-3">These answers focus on practical use of the offline vehicle verification experience.</p>
+</section>
+
+<section class="page-block" data-shell-card>
+    <div class="accordion" id="faqAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="faqHeading1"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse1">What if my vehicle is not found in the database?</button></h2>
+            <div id="faqCollapse1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion"><div class="accordion-body">Double-check the identifier, try a different search route, and use combined search if you only have partial documents. A missing result can also mean the record is not present in the packaged offline dataset.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="faqHeading2"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse2">Is this an official government portal?</button></h2>
+            <div id="faqCollapse2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">This app is styled for Pakistan customs verification use cases and uses customs-linked records offline, but sensitive or legal matters should still be confirmed through official customs channels.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="faqHeading3"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse3">Which search is best?</button></h2>
+            <div id="faqCollapse3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">Chassis search is usually best when you have the vehicle. GD, IGM, BL, ONO, and delivery order searches are ideal for document review. Combined search is the fallback when the paperwork is incomplete.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="faqHeading4"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse4">Is my search data stored online?</button></h2>
+            <div id="faqCollapse4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">The experience is designed around an offline packaged database. The app does not require a live online lookup for normal searching.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="faqHeading5"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapse5">Can I trust the result completely?</button></h2>
+            <div id="faqCollapse5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">Use the result as a strong verification reference, especially before a vehicle purchase, but cross-check critical cases through official customs channels when the decision has legal or financial risk.</div></div>
+        </div>
+    </div>
+</section>
+{% endblock %}
