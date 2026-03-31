@@ -330,7 +330,7 @@ def create_flask_app(database_path: Path) -> Flask:
         if connection is not None:
             connection.close()
 
-    @flask_app.route("/static/<path:filename>")
+    @flask_app.route("/static/<path:filename>", endpoint="static")
     def serve_static(filename: str):
         roots: list[Path] = flask_app.config.get("STATIC_ROOTS", [])
         candidates = [filename, filename.lstrip("/"), Path(filename).name]
@@ -581,3 +581,4 @@ except Exception as startup_error:
 
 if __name__ == "__main__":
     app.run(host=SERVER_HOST, port=SERVER_PORT, debug=False, use_reloader=False, threaded=True)
+
