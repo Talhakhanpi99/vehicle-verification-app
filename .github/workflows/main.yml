@@ -1,47 +1,79 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch: # Allows you to run this manually whenever you want
+  workflow_dispatch:
   push:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
 
 jobs:
   build-android:
     runs-on: ubuntu-22.04
+    env:
+      DEFAULT_DB_URL: https://drive.google.com/file/d/13cJresq-tUmD6dFH7xK9YV04c49_acCy/view?usp=sharing
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: mobile_app
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create Database Directory
-        run: mkdir -p database
-
-      - name: Download Database from Google Drive
-        # This grabs your DB file on the fly and places it right where Buildozer expects it
-        run: |
-          wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=13cJresq-tUmD6dFH7xK9YV04c49_acCy' -O database/offlinedata.db
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
-      - name: Install System Dependencies
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install system dependencies
         run: |
           sudo apt update
-          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          sudo apt install -y \
+            git zip unzip python3-pip python3-virtualenv \
+            autoconf libtool pkg-config zlib1g-dev libncurses5-dev \
+            libncursesw5-dev libtinfo6 cmake libffi-dev libssl-dev \
+            automake autopoint gettext
 
-      - name: Install Buildozer & Cython
+      - name: Install Python build tools
         run: |
-          pip install --upgrade buildozer "cython<3.0" virtualenv
+          python -m pip install --upgrade pip
+          pip install --upgrade buildozer "cython<3.0" virtualenv gdown
+
+      - name: Prepare database directory
+        run: mkdir -p database
+
+      - name: Download offline database
+        run: |
+          DB_URL="${{ secrets.PRAAL_DB_URL }}"
+          if [ -z "$DB_URL" ]; then
+            DB_URL="${{ vars.PRAAL_DB_URL }}"
+          fi
+          if [ -z "$DB_URL" ]; then
+            DB_URL="$DEFAULT_DB_URL"
+          fi
+
+          if [[ "$DB_URL" == *"drive.google.com"* ]]; then
+            gdown --fuzzy "$DB_URL" -O database/offlinedata.db
+          else
+            curl -L "$DB_URL" -o database/offlinedata.db
+          fi
+
+          test -s database/offlinedata.db
+
+      - name: Clean previous Android build cache
+        run: rm -rf .buildozer bin
 
       - name: Build APK with Buildozer
-        # This will automatically accept Android SDK licenses and build the APK
-        run: |
-          yes | buildozer android debug
+        run: buildozer -v android debug
 
-      - name: Upload APK Artifact
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Android-APK
-          path: bin/*.apk
+          path: mobile_app/bin/*.apk
