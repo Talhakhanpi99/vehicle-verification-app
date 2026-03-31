@@ -11,14 +11,26 @@ jobs:
     env:
       DEFAULT_DB_URL: https://drive.google.com/file/d/13cJresq-tUmD6dFH7xK9YV04c49_acCy/view?usp=sharing
 
-    defaults:
-      run:
-        shell: bash
-        working-directory: mobile_app
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Locate Android project
+        id: locate
+        shell: bash
+        run: |
+          if [ -f "mobile_app/buildozer.spec" ]; then
+            echo "project_dir=mobile_app" >> "$GITHUB_OUTPUT"
+          elif [ -f "buildozer.spec" ]; then
+            echo "project_dir=." >> "$GITHUB_OUTPUT"
+          else
+            echo "Could not find buildozer.spec in repo root or mobile_app/" >&2
+            find . -maxdepth 3 -type f -name buildozer.spec
+            exit 1
+          fi
+
+      - name: Show selected project directory
+        run: echo "Using project dir: ${{ steps.locate.outputs.project_dir }}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -46,10 +58,15 @@ jobs:
           pip install --upgrade buildozer "cython<3.0" virtualenv gdown
 
       - name: Prepare database directory
-        run: mkdir -p database
+        shell: bash
+        run: |
+          PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
+          mkdir -p "$PROJECT_DIR/database"
 
       - name: Download offline database
+        shell: bash
         run: |
+          PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
           DB_URL="${{ secrets.PRAAL_DB_URL }}"
           if [ -z "$DB_URL" ]; then
             DB_URL="${{ vars.PRAAL_DB_URL }}"
@@ -59,21 +76,28 @@ jobs:
           fi
 
           if [[ "$DB_URL" == *"drive.google.com"* ]]; then
-            gdown --fuzzy "$DB_URL" -O database/offlinedata.db
+            gdown --fuzzy "$DB_URL" -O "$PROJECT_DIR/database/offlinedata.db"
           else
-            curl -L "$DB_URL" -o database/offlinedata.db
+            curl -L "$DB_URL" -o "$PROJECT_DIR/database/offlinedata.db"
           fi
 
-          test -s database/offlinedata.db
+          test -s "$PROJECT_DIR/database/offlinedata.db"
 
       - name: Clean previous Android build cache
-        run: rm -rf .buildozer bin
+        shell: bash
+        run: |
+          PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
+          rm -rf "$PROJECT_DIR/.buildozer" "$PROJECT_DIR/bin"
 
       - name: Build APK with Buildozer
-        run: buildozer -v android debug
+        shell: bash
+        run: |
+          PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
+          cd "$PROJECT_DIR"
+          buildozer -v android debug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Android-APK
-          path: mobile_app/bin/*.apk
+          path: ${{ steps.locate.outputs.project_dir }}/bin/*.apk
