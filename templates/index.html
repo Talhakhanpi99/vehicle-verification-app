@@ -1,0 +1,223 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Home - PRAAL Offline Vehicle Verification{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="page-block" data-shell-card>
+        <span class="section-badge"><i class="fas fa-shield-alt"></i> Pakistan Customs Inspired</span>
+        <h2 class="page-title">Verify imported vehicle records with a cleaner, more official-looking offline experience.</h2>
+        <p class="page-copy mt-3">Choose the search path that matches the documents you have. Chassis search is usually the fastest, while combined search is ideal when the seller only shares partial import information.</p>
+        <div class="helper-strip mt-4">
+            <span class="helper-pill"><i class="fas fa-wifi-slash"></i> Offline-first Android flow</span>
+            <span class="helper-pill"><i class="fas fa-file-invoice"></i> Customs identifiers supported</span>
+            <span class="helper-pill"><i class="fas fa-mobile-alt"></i> Mobile-friendly results</span>
+        </div>
+    </div>
+    <div class="page-block">
+        <div class="fact-stack">
+            <div class="notice-card">
+                <span class="fact-label">Primary Search</span>
+                <span class="fact-value">Chassis and VIN lookup</span>
+                <p class="muted-copy mb-0 mt-2">Best starting point when you have the vehicle details directly.</p>
+            </div>
+            <div class="notice-card">
+                <span class="fact-label">Supporting Search</span>
+                <span class="fact-value">GD, IGM, BL, ONO, delivery order</span>
+                <p class="muted-copy mb-0 mt-2">Useful for import paperwork and amnesty-linked record trails.</p>
+            </div>
+            <div class="notice-card">
+                <span class="fact-label">Use Case</span>
+                <span class="fact-value">Vehicle purchase and document review</span>
+                <p class="muted-copy mb-0 mt-2">Built to help check customs-linked records before making decisions.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-grid">
+    <article class="search-panel" data-shell-card>
+        <div class="panel-head">
+            <div>
+                <span class="section-badge">Fastest route</span>
+                <h3 class="section-title mt-3">Search by Chassis Number</h3>
+                <p class="section-copy mb-0">Use the full chassis or VIN exactly as it appears on the vehicle documents.</p>
+            </div>
+            <span class="panel-icon"><i class="fas fa-car-side"></i></span>
+        </div>
+        <form action="/search" method="POST" class="search-form">
+            <input type="hidden" name="search_type" value="chassis">
+            <div class="input-group">
+                <input type="text" name="chassis_number" class="form-control" placeholder="Enter chassis number">
+                <button type="submit" class="btn btn-success">Search</button>
+            </div>
+        </form>
+    </article>
+
+    <article class="search-panel" data-shell-card>
+        <div class="panel-head">
+            <div>
+                <span class="section-badge">Import declaration</span>
+                <h3 class="section-title mt-3">Search by GD Number</h3>
+                <p class="section-copy mb-0">Enter the customs code, type, and machine number for a focused declaration lookup.</p>
+            </div>
+            <span class="panel-icon"><i class="fas fa-file-alt"></i></span>
+        </div>
+        <form action="/search" method="POST" class="search-form">
+            <input type="hidden" name="search_type" value="gd_no_date">
+            <div class="row g-2">
+                <div class="col-md-4"><input type="text" name="cltcod" class="form-control format-placeholder" placeholder="KAPR"></div>
+                <div class="col-md-4"><input type="text" name="betype" class="form-control format-placeholder" placeholder="HC"></div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <input type="text" name="mchnum" class="form-control format-placeholder" placeholder="123456">
+                        <button type="submit" class="btn btn-success">Search</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </article>
+
+    <article class="search-panel" data-shell-card>
+        <div class="panel-head">
+            <div>
+                <span class="section-badge">Manifest lookup</span>
+                <h3 class="section-title mt-3">Search by IGM Number</h3>
+                <p class="section-copy mb-0">Ideal when you have import manifest details instead of the chassis number.</p>
+            </div>
+            <span class="panel-icon"><i class="fas fa-ship"></i></span>
+        </div>
+        <form action="/search" method="POST" class="search-form">
+            <input type="hidden" name="search_type" value="igm_no_date">
+            <div class="row g-2">
+                <div class="col-md-4"><input type="text" name="igm_no" class="form-control" placeholder="IGM number"></div>
+                <div class="col-md-4"><input type="text" name="igm_index" class="form-control" placeholder="Index number"></div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <input type="text" name="igm_year" class="form-control" placeholder="Year">
+                        <button type="submit" class="btn btn-success">Search</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </article>
+
+    <article class="search-panel" data-shell-card>
+        <div class="panel-head">
+            <div>
+                <span class="section-badge">Shipping records</span>
+                <h3 class="section-title mt-3">Search by BL Number</h3>
+                <p class="section-copy mb-0">Use the bill of lading number from shipping or clearance paperwork.</p>
+            </div>
+            <span class="panel-icon"><i class="fas fa-anchor"></i></span>
+        </div>
+        <form action="/search" method="POST" class="search-form">
+            <input type="hidden" name="search_type" value="bl_no">
+            <div class="input-group">
+                <input type="text" name="bl_no" class="form-control" placeholder="Enter bill of lading number">
+                <button type="submit" class="btn btn-success">Search</button>
+            </div>
+        </form>
+    </article>
+
+    <article class="search-panel" data-shell-card>
+        <div class="panel-head">
+            <div>
+                <span class="section-badge">Amnesty file</span>
+                <h3 class="section-title mt-3">Search by ONO Number</h3>
+                <p class="section-copy mb-0">Useful for amnesty-linked verification when the order in original number is available.</p>
+            </div>
+            <span class="panel-icon"><i class="fas fa-clipboard-check"></i></span>
+        </div>
+        <form action="/search" method="POST" class="search-form">
+            <input type="hidden" name="search_type" value="ono_no">
+            <div class="input-group">
+                <input type="text" name="ono_no" class="form-control" placeholder="Enter order in original number">
+                <button type="submit" class="btn btn-success">Search</button>
+            </div>
+        </form>
+    </article>
+
+    <article class="search-panel" data-shell-card>
+        <div class="panel-head">
+            <div>
+                <span class="section-badge">Amnesty file</span>
+                <h3 class="section-title mt-3">Search by Delivery Order</h3>
+                <p class="section-copy mb-0">Match delivery order references against the packaged customs records.</p>
+            </div>
+            <span class="panel-icon"><i class="fas fa-truck-loading"></i></span>
+        </div>
+        <form action="/search" method="POST" class="search-form">
+            <input type="hidden" name="search_type" value="delivery_order_no">
+            <div class="input-group">
+                <input type="text" name="delivery_order_no" class="form-control" placeholder="Enter delivery order number">
+                <button type="submit" class="btn btn-success">Search</button>
+            </div>
+        </form>
+    </article>
+
+    <article class="search-panel search-panel--wide" data-shell-card>
+        <div class="panel-head">
+            <div>
+                <span class="section-badge">When documents are incomplete</span>
+                <h3 class="section-title mt-3">Combined Search</h3>
+                <p class="section-copy mb-0">The app will gather every non-empty field from the forms above and run a broader search across the available source files.</p>
+            </div>
+            <span class="panel-icon"><i class="fas fa-layer-group"></i></span>
+        </div>
+        <div class="helper-strip">
+            <span class="helper-pill"><i class="fas fa-circle-check"></i> Add one or many identifiers</span>
+            <span class="helper-pill"><i class="fas fa-circle-check"></i> Best for mixed paperwork</span>
+            <span class="helper-pill"><i class="fas fa-circle-check"></i> Redirects to a combined results view</span>
+        </div>
+        <button type="button" id="combinedSearchBtn" class="btn btn-primary">Run Combined Search</button>
+    </article>
+</section>
+
+<section class="quick-grid">
+    <div class="info-panel" data-shell-card>
+        <span class="section-badge">Search guidance</span>
+        <h3 class="section-title mt-3">How to get the best match</h3>
+        <ul class="mt-3 mb-0">
+            <li>Enter the full identifier when possible, without extra spaces.</li>
+            <li>Use chassis search first if you have the vehicle itself in front of you.</li>
+            <li>Switch to GD, IGM, BL, ONO, or delivery order when you are reviewing import paperwork.</li>
+            <li>Save or print the result screen before making a purchase decision.</li>
+        </ul>
+    </div>
+    <div class="info-panel" data-shell-card>
+        <span class="section-badge">Built for Pakistan customs workflows</span>
+        <h3 class="section-title mt-3">A sharper field-ready interface</h3>
+        <p class="section-copy mt-3">This styling refresh keeps the workflow practical for vehicle buyers, officers, and document reviewers while making the interface feel more polished and trustworthy on mobile.</p>
+        <div class="action-row mt-4">
+            <a href="/guide" class="btn btn-outline-primary">Open User Guide</a>
+            <a href="/faq" class="btn btn-outline-primary">Read FAQs</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('combinedSearchBtn').addEventListener('click', function () {
+        const forms = document.querySelectorAll('.search-form');
+        const searchParams = new URLSearchParams();
+        let hasActiveTerm = false;
+        searchParams.append('search_type', 'combined');
+        forms.forEach(function (form) {
+            form.querySelectorAll('input[type="text"]').forEach(function (input) {
+                const value = input.value.trim();
+                if (value) {
+                    searchParams.append(input.name, value);
+                    hasActiveTerm = true;
+                }
+            });
+        });
+        if (!hasActiveTerm) {
+            appNotice('Enter at least one identifier before running combined search.', 'warning');
+            return;
+        }
+        window.location.href = '/search?' + searchParams.toString();
+    });
+</script>
+{% endblock %}
