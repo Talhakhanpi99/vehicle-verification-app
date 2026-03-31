@@ -1,0 +1,30 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Privacy - PRAAL Offline Vehicle Verification{% endblock %}
+
+{% block content %}
+<section class="page-block" data-shell-card>
+    <span class="section-badge"><i class="fas fa-user-shield"></i> Privacy</span>
+    <h2 class="page-title mt-3">A simpler privacy story because the experience is designed offline</h2>
+    <p class="page-copy mt-3">The normal search flow runs against the packaged database inside the app, which keeps the privacy model easier to understand than a live online search portal.</p>
+</section>
+
+<section class="policy-grid">
+    <div class="policy-card" data-shell-card>
+        <span class="section-badge">What is searched</span>
+        <p class="mt-3 mb-0">The app searches the offline vehicle verification database bundled with the APK.</p>
+    </div>
+    <div class="policy-card" data-shell-card>
+        <span class="section-badge">What is not required</span>
+        <p class="mt-3 mb-0">Normal searches do not require a live online connection or an online account.</p>
+    </div>
+    <div class="policy-card" data-shell-card>
+        <span class="section-badge">What you control</span>
+        <p class="mt-3 mb-0">You decide when to share, print, copy, or capture a record on your device.</p>
+    </div>
+    <div class="policy-card" data-shell-card>
+        <span class="section-badge">Support contact</span>
+        <p class="mt-3 mb-0">If you contact support by email or phone, that communication follows the tools you choose to use outside the app.</p>
+    </div>
+</section>
+{% endblock %}
