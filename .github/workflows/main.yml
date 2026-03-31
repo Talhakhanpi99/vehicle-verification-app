@@ -30,7 +30,8 @@ jobs:
           fi
 
       - name: Show selected project directory
-        run: echo "Using project dir: ${{ steps.locate.outputs.project_dir }}"
+        run: |
+          echo "Using project dir: ${{ steps.locate.outputs.project_dir }}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
