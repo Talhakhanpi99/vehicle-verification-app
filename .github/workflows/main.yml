@@ -1,3 +1,4 @@
+# .github/workflows/main.yml
 name: Build Android APK
 
 on:
@@ -84,6 +85,13 @@ jobs:
 
           test -s "$PROJECT_DIR/database/offlinedata.db"
 
+      - name: Show project tree snapshot
+        shell: bash
+        run: |
+          PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
+          echo "Project tree for diagnostics:"
+          find "$PROJECT_DIR" -maxdepth 3 -type f | sort
+
       - name: Clean previous Android build cache
         shell: bash
         run: |
@@ -95,7 +103,16 @@ jobs:
         run: |
           PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
           cd "$PROJECT_DIR"
-          buildozer -v android debug
+          set -o pipefail
+          buildozer -v android debug 2>&1 | tee buildozer-ci.log
+
+      - name: Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Buildozer-Log
+          path: ${{ steps.locate.outputs.project_dir }}/buildozer-ci.log
+          if-no-files-found: warn
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
