@@ -1,4 +1,3 @@
-# mobile_app/buildozer.spec
 [app]
 title = PRAAL Offline
 package.name = praaloffline
