@@ -1,20 +1,24 @@
-﻿from __future__ import annotations
+# mobile_app/main.py
+from __future__ import annotations
 
 import logging
 import os
-import shutil
 import sqlite3
+import traceback
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, g, redirect, render_template, request, url_for
+from flask import Flask, abort, g, jsonify, redirect, render_template, request, send_from_directory, url_for
+from jinja2 import ChoiceLoader, FileSystemLoader, TemplateNotFound
 
 
 APP_DIR = Path(__file__).resolve().parent
 PACKAGED_DB_PATH = APP_DIR / "database" / "offlinedata.db"
 SERVER_HOST = "127.0.0.1"
 SERVER_PORT = int(os.environ.get("PRAAL_PORT", "5000"))
+RUNTIME_LOG_NAME = "praal_startup.log"
+STARTUP_NOTES: list[str] = []
 
 DISPLAY_ORDER = {
     "AMNESTY": [
@@ -176,6 +180,33 @@ IDENTIFIER_FIELDS = {
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
+def get_runtime_root() -> Path:
+    android_private = os.environ.get("ANDROID_PRIVATE")
+    if android_private:
+        runtime_root = Path(android_private)
+    else:
+        runtime_root = APP_DIR / ".runtime"
+
+    runtime_root.mkdir(parents=True, exist_ok=True)
+    return runtime_root
+
+
+def append_startup_note(message: str, level: str = "INFO") -> None:
+    timestamp = datetime.now().isoformat(timespec="seconds")
+    line = f"{timestamp} [{level}] {message}"
+    STARTUP_NOTES.append(line)
+
+    log_method = getattr(logging, level.lower(), logging.info)
+    log_method(message)
+
+    try:
+        log_path = get_runtime_root() / RUNTIME_LOG_NAME
+        with log_path.open("a", encoding="utf-8") as log_file:
+            log_file.write(line + "\n")
+    except Exception:
+        pass
+
+
 def normalize_term(value: str) -> str:
     return " ".join(value.split()).strip().lower()
 
@@ -189,51 +220,109 @@ def display_value(value) -> str:
     return text
 
 
-def get_runtime_root() -> Path:
-    android_private = os.environ.get("ANDROID_PRIVATE")
-    if android_private:
-        runtime_root = Path(android_private)
-    else:
-        runtime_root = APP_DIR / ".runtime"
+def detect_template_roots() -> list[Path]:
+    roots: list[Path] = []
+    standard = APP_DIR / "templates"
+    if (standard / "index.html").exists():
+        roots.append(standard)
 
-    runtime_root.mkdir(parents=True, exist_ok=True)
-    return runtime_root
+    # Fallback for flattened packaging where templates are at app root.
+    if (APP_DIR / "index.html").exists():
+        roots.append(APP_DIR)
+
+    return roots
 
 
-def copy_runtime_database() -> Path:
-    if not PACKAGED_DB_PATH.exists():
-        raise FileNotFoundError(
-            "The packaged SQLite database is missing. Run converter.py before rebuilding the APK."
-        )
+def detect_static_roots() -> list[Path]:
+    roots: list[Path] = []
+    standard = APP_DIR / "static"
+    if standard.exists():
+        roots.append(standard)
 
-    runtime_dir = get_runtime_root() / "database"
-    runtime_dir.mkdir(parents=True, exist_ok=True)
-    runtime_db_path = runtime_dir / "offlinedata.db"
+    # Fallback for flattened packaging where css/js files are at app root.
+    root_assets = ["style.css", "script.js", "offline_bootstrap.css", "offline_ui.js"]
+    if any((APP_DIR / name).exists() for name in root_assets):
+        roots.append(APP_DIR)
 
-    should_copy = not runtime_db_path.exists()
-    if runtime_db_path.exists():
-        should_copy = PACKAGED_DB_PATH.stat().st_mtime > runtime_db_path.stat().st_mtime
+    return roots
 
-    if should_copy:
-        shutil.copy2(PACKAGED_DB_PATH, runtime_db_path)
 
-    return runtime_db_path
+def select_database_path() -> Path:
+    candidates = [PACKAGED_DB_PATH, APP_DIR / "offlinedata.db"]
+
+    for path in candidates:
+        if path.exists():
+            append_startup_note(f"Database candidate found: {path} ({path.stat().st_size} bytes)")
+            return path
+
+    raise FileNotFoundError(
+        "The packaged SQLite database is missing. Ensure offlinedata.db is inside mobile_app/database before build."
+    )
+
+
+def startup_summary(database_path: Path, template_roots: list[Path], static_roots: list[Path]) -> dict:
+    summary: dict[str, object] = {
+        "app_dir": str(APP_DIR),
+        "database_path": str(database_path),
+        "database_exists": database_path.exists(),
+        "database_size": database_path.stat().st_size if database_path.exists() else None,
+        "template_roots": [str(path) for path in template_roots],
+        "static_roots": [str(path) for path in static_roots],
+        "app_dir_entries": sorted(path.name for path in APP_DIR.iterdir()) if APP_DIR.exists() else [],
+    }
+
+    try:
+        usage = os.statvfs(str(get_runtime_root()))
+        free_bytes = usage.f_bavail * usage.f_frsize
+        summary["runtime_free_bytes"] = free_bytes
+    except Exception:
+        summary["runtime_free_bytes"] = None
+
+    return summary
 
 
 def create_flask_app(database_path: Path) -> Flask:
-    flask_app = Flask(
-        __name__,
-        template_folder=str(APP_DIR / "templates"),
-        static_folder=str(APP_DIR / "static"),
-    )
+    template_roots = detect_template_roots()
+    static_roots = detect_static_roots()
+
+    if not template_roots:
+        raise FileNotFoundError("No usable template directory found (templates/index.html missing).")
+
+    flask_app = Flask(__name__, template_folder=str(template_roots[0]), static_folder=None)
+    if len(template_roots) > 1:
+        flask_app.jinja_loader = ChoiceLoader([FileSystemLoader(str(path)) for path in template_roots])
+
     flask_app.config["DATABASE_PATH"] = str(database_path)
+    flask_app.config["STATIC_ROOTS"] = static_roots
+    flask_app.config["STARTUP_SUMMARY"] = startup_summary(database_path, template_roots, static_roots)
     flask_app.secret_key = "praal-offline-mobile"
+
+    append_startup_note(f"Using template roots: {[str(path) for path in template_roots]}")
+    append_startup_note(f"Using static roots: {[str(path) for path in static_roots]}")
 
     def get_db() -> sqlite3.Connection:
         if "db" not in g:
-            connection = sqlite3.connect(flask_app.config["DATABASE_PATH"])
+            db_path = Path(flask_app.config["DATABASE_PATH"])
+            db_uri = f"file:{db_path.as_posix()}?mode=ro"
+
+            try:
+                connection = sqlite3.connect(db_uri, uri=True, check_same_thread=False)
+                append_startup_note(f"SQLite opened in read-only mode: {db_path}")
+            except sqlite3.Error as error:
+                append_startup_note(
+                    f"Read-only SQLite open failed ({error}); falling back to direct open.",
+                    level="ERROR",
+                )
+                connection = sqlite3.connect(str(db_path), check_same_thread=False)
+
             connection.row_factory = sqlite3.Row
+            try:
+                connection.execute("PRAGMA query_only = ON")
+            except sqlite3.Error:
+                pass
+
             g.db = connection
+
         return g.db
 
     @flask_app.teardown_appcontext
@@ -242,9 +331,30 @@ def create_flask_app(database_path: Path) -> Flask:
         if connection is not None:
             connection.close()
 
+    @flask_app.route("/static/<path:filename>")
+    def serve_static(filename: str):
+        roots: list[Path] = flask_app.config.get("STATIC_ROOTS", [])
+        candidates = [filename, filename.lstrip("/"), Path(filename).name]
+
+        for root in roots:
+            for relative in candidates:
+                candidate = root / relative
+                if candidate.exists() and candidate.is_file():
+                    return send_from_directory(str(root), relative)
+
+        abort(404)
+
     @flask_app.route("/")
     def index():
-        return render_template("index.html")
+        try:
+            return render_template("index.html")
+        except TemplateNotFound as error:
+            append_startup_note(f"Template render failed on '/': {error}", level="ERROR")
+            return (
+                "<h3>PRAAL Offline - Startup Template Error</h3>"
+                "<p>Open <code>/__health</code> for diagnostics.</p>",
+                500,
+            )
 
     @flask_app.route("/search", methods=["GET", "POST"])
     def search():
@@ -313,6 +423,16 @@ def create_flask_app(database_path: Path) -> Flask:
     @flask_app.route("/privacy")
     def privacy():
         return render_template("privacy.html")
+
+    @flask_app.route("/__health")
+    def health():
+        payload = {
+            "status": "ok",
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "summary": flask_app.config.get("STARTUP_SUMMARY", {}),
+            "notes": STARTUP_NOTES[-80:],
+        }
+        return jsonify(payload)
 
     return flask_app
 
@@ -416,12 +536,49 @@ def render_display_text(search_type: str, row_dict: dict) -> str:
     return template.format_map(safe_row)
 
 
-DATABASE_PATH = copy_runtime_database()
-app = create_flask_app(DATABASE_PATH)
+def create_failure_app(error: Exception, trace_text: str) -> Flask:
+    fallback = Flask(__name__)
+
+    @fallback.route("/", defaults={"path": ""})
+    @fallback.route("/<path:path>")
+    def failed_startup(path: str):
+        log_hint = get_runtime_root() / RUNTIME_LOG_NAME
+        body = (
+            "<h3>PRAAL Offline Startup Failed</h3>"
+            "<p>The app failed before opening the main page.</p>"
+            f"<p>Error: <code>{type(error).__name__}: {error}</code></p>"
+            f"<p>Runtime log: <code>{log_hint}</code></p>"
+            "<p>Open <code>/__health</code> for structured diagnostics.</p>"
+            f"<pre>{trace_text}</pre>"
+        )
+        return body, 500
+
+    @fallback.route("/__health")
+    def failed_health():
+        return jsonify(
+            {
+                "status": "failed",
+                "error": f"{type(error).__name__}: {error}",
+                "notes": STARTUP_NOTES[-80:],
+                "traceback": trace_text,
+            }
+        ), 500
+
+    return fallback
+
+
+append_startup_note(f"App directory: {APP_DIR}")
+append_startup_note(f"Android private path: {os.environ.get('ANDROID_PRIVATE', '(not set)')}")
+
+try:
+    DATABASE_PATH = select_database_path()
+    app = create_flask_app(DATABASE_PATH)
+    append_startup_note("Application initialized successfully.")
+except Exception as startup_error:
+    startup_traceback = traceback.format_exc()
+    append_startup_note(f"Fatal startup error: {startup_error}", level="ERROR")
+    app = create_failure_app(startup_error, startup_traceback)
 
 
 if __name__ == "__main__":
     app.run(host=SERVER_HOST, port=SERVER_PORT, debug=False, use_reloader=False, threaded=True)
-
-
-
