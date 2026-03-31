@@ -102,40 +102,21 @@ jobs:
       - name: Verify packaged app contents
         shell: bash
         run: |
-          python - <<'PY'
-import io
-import tarfile
-import zipfile
-from pathlib import Path
+          APK="$(ls -1 "$PROJECT_DIR"/bin/*.apk | tail -n 1)"
+          test -n "$APK"
+          echo "Checking APK: $APK"
 
-project_dir = Path('mobile_app')
-apks = sorted(project_dir.joinpath('bin').glob('*.apk'))
-if not apks:
-    raise SystemExit('No APK found in mobile_app/bin')
-apk = apks[-1]
-print(f'Checking APK: {apk}')
+          unzip -p "$APK" assets/private.tar > private.tar
+          tar -tf private.tar > private.list
 
-with zipfile.ZipFile(apk, 'r') as zf:
-    if 'assets/private.tar' not in zf.namelist():
-        raise SystemExit('assets/private.tar missing in APK')
-    tar_bytes = zf.read('assets/private.tar')
+          grep -qx 'main.pyc' private.list
+          grep -qx 'database/offlinedata.db' private.list
+          grep -qx 'templates/index.html' private.list
+          grep -qx 'static/css/style.css' private.list
+          grep -qx 'static/js/script.js' private.list
 
-with tarfile.open(fileobj=io.BytesIO(tar_bytes), mode='r:') as tf:
-    names = set(tf.getnames())
-
-required = {
-    'main.pyc',
-    'database/offlinedata.db',
-    'templates/index.html',
-    'static/css/style.css',
-    'static/js/script.js',
-}
-missing = sorted(required - names)
-if missing:
-    raise SystemExit('Missing expected packaged files: ' + ', '.join(missing))
-
-print('APK packaging check passed.')
-PY
+          rm -f private.tar private.list
+          echo "APK packaging check passed."
 
       - name: Upload Build Log
         if: always()
