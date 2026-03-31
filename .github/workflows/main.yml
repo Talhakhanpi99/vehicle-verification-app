@@ -1,4 +1,3 @@
-# .github/workflows/main.yml
 name: Build Android APK
 
 on:
@@ -10,29 +9,27 @@ jobs:
   build-android:
     runs-on: ubuntu-22.04
     env:
+      PROJECT_DIR: mobile_app
       DEFAULT_DB_URL: "https://drive.google.com/file/d/13cJresq-tUmD6dFH7xK9YV04c49_acCy/view?usp=sharing"
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Locate Android project
-        id: locate
+      - name: Validate Android project directory
         shell: bash
         run: |
-          if [ -f "mobile_app/buildozer.spec" ]; then
-            echo "project_dir=mobile_app" >> "$GITHUB_OUTPUT"
-          elif [ -f "buildozer.spec" ]; then
-            echo "project_dir=." >> "$GITHUB_OUTPUT"
-          else
-            echo "Could not find buildozer.spec in repo root or mobile_app/" >&2
-            find . -maxdepth 3 -type f -name buildozer.spec
-            exit 1
-          fi
+          test -d "$PROJECT_DIR"
+          test -f "$PROJECT_DIR/buildozer.spec"
+          test -f "$PROJECT_DIR/main.py"
+          test -f "$PROJECT_DIR/templates/index.html"
+          test -f "$PROJECT_DIR/static/css/style.css"
+          echo "Using fixed project dir: $PROJECT_DIR"
 
-      - name: Show selected project directory
+      - name: Print source file hashes
+        shell: bash
         run: |
-          echo "Using project dir: ${{ steps.locate.outputs.project_dir }}"
+          sha256sum "$PROJECT_DIR/main.py" "$PROJECT_DIR/buildozer.spec" "$PROJECT_DIR/templates/index.html"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -62,13 +59,11 @@ jobs:
       - name: Prepare database directory
         shell: bash
         run: |
-          PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
           mkdir -p "$PROJECT_DIR/database"
 
       - name: Download offline database
         shell: bash
         run: |
-          PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
           DB_URL="${{ secrets.PRAAL_DB_URL }}"
           if [ -z "$DB_URL" ]; then
             DB_URL="${{ vars.PRAAL_DB_URL }}"
@@ -84,38 +79,74 @@ jobs:
           fi
 
           test -s "$PROJECT_DIR/database/offlinedata.db"
+          ls -lh "$PROJECT_DIR/database/offlinedata.db"
 
       - name: Show project tree snapshot
         shell: bash
         run: |
-          PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
           echo "Project tree for diagnostics:"
           find "$PROJECT_DIR" -maxdepth 3 -type f | sort
 
       - name: Clean previous Android build cache
         shell: bash
         run: |
-          PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
           rm -rf "$PROJECT_DIR/.buildozer" "$PROJECT_DIR/bin"
 
       - name: Build APK with Buildozer
         shell: bash
         run: |
-          PROJECT_DIR="${{ steps.locate.outputs.project_dir }}"
           cd "$PROJECT_DIR"
           set -o pipefail
           buildozer -v android debug 2>&1 | tee buildozer-ci.log
+
+      - name: Verify packaged app contents
+        shell: bash
+        run: |
+          python - <<'PY'
+import io
+import tarfile
+import zipfile
+from pathlib import Path
+
+project_dir = Path('mobile_app')
+apks = sorted(project_dir.joinpath('bin').glob('*.apk'))
+if not apks:
+    raise SystemExit('No APK found in mobile_app/bin')
+apk = apks[-1]
+print(f'Checking APK: {apk}')
+
+with zipfile.ZipFile(apk, 'r') as zf:
+    if 'assets/private.tar' not in zf.namelist():
+        raise SystemExit('assets/private.tar missing in APK')
+    tar_bytes = zf.read('assets/private.tar')
+
+with tarfile.open(fileobj=io.BytesIO(tar_bytes), mode='r:') as tf:
+    names = set(tf.getnames())
+
+required = {
+    'main.pyc',
+    'database/offlinedata.db',
+    'templates/index.html',
+    'static/css/style.css',
+    'static/js/script.js',
+}
+missing = sorted(required - names)
+if missing:
+    raise SystemExit('Missing expected packaged files: ' + ', '.join(missing))
+
+print('APK packaging check passed.')
+PY
 
       - name: Upload Build Log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Buildozer-Log
-          path: ${{ steps.locate.outputs.project_dir }}/buildozer-ci.log
+          path: mobile_app/buildozer-ci.log
           if-no-files-found: warn
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Android-APK
-          path: ${{ steps.locate.outputs.project_dir }}/bin/*.apk
+          path: mobile_app/bin/*.apk
