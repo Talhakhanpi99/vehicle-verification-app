@@ -9,27 +9,26 @@ jobs:
   build-android:
     runs-on: ubuntu-22.04
     env:
-      PROJECT_DIR: mobile_app
-      DEFAULT_DB_URL: "https://drive.google.com/file/d/13cJresq-tUmD6dFH7xK9YV04c49_acCy/view?usp=sharing"
+      DEFAULT_DB_URL: "https://drive.google.com/file/d/13cJresq-tUmD6dFH7xK9YV04c49_acCy/view?usp=drive_link"
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Validate Android project directory
+      - name: Validate root project layout
         shell: bash
         run: |
-          test -d "$PROJECT_DIR"
-          test -f "$PROJECT_DIR/buildozer.spec"
-          test -f "$PROJECT_DIR/main.py"
-          test -f "$PROJECT_DIR/templates/index.html"
-          test -f "$PROJECT_DIR/static/css/style.css"
-          echo "Using fixed project dir: $PROJECT_DIR"
+          test -f "buildozer.spec"
+          test -f "main.py"
+          test -f "templates/index.html"
+          test -f "static/css/style.css"
+          test -f "static/js/script.js"
+          echo "Using repository root as Android project directory"
 
       - name: Print source file hashes
         shell: bash
         run: |
-          sha256sum "$PROJECT_DIR/main.py" "$PROJECT_DIR/buildozer.spec" "$PROJECT_DIR/templates/index.html"
+          sha256sum main.py buildozer.spec templates/index.html static/css/style.css static/js/script.js
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -59,9 +58,9 @@ jobs:
       - name: Prepare database directory
         shell: bash
         run: |
-          mkdir -p "$PROJECT_DIR/database"
+          mkdir -p database
 
-      - name: Download offline database
+      - name: Download offline database from Google Drive
         shell: bash
         run: |
           DB_URL="${{ secrets.PRAAL_DB_URL }}"
@@ -73,36 +72,35 @@ jobs:
           fi
 
           if [[ "$DB_URL" == *"drive.google.com"* ]]; then
-            gdown --fuzzy "$DB_URL" -O "$PROJECT_DIR/database/offlinedata.db"
+            gdown --fuzzy "$DB_URL" -O database/offlinedata.db
           else
-            curl -L "$DB_URL" -o "$PROJECT_DIR/database/offlinedata.db"
+            curl -L "$DB_URL" -o database/offlinedata.db
           fi
 
-          test -s "$PROJECT_DIR/database/offlinedata.db"
-          ls -lh "$PROJECT_DIR/database/offlinedata.db"
+          test -s database/offlinedata.db
+          ls -lh database/offlinedata.db
 
       - name: Show project tree snapshot
         shell: bash
         run: |
           echo "Project tree for diagnostics:"
-          find "$PROJECT_DIR" -maxdepth 3 -type f | sort
+          find . -maxdepth 3 -type f | sort
 
       - name: Clean previous Android build cache
         shell: bash
         run: |
-          rm -rf "$PROJECT_DIR/.buildozer" "$PROJECT_DIR/bin"
+          rm -rf .buildozer bin
 
       - name: Build APK with Buildozer
         shell: bash
         run: |
-          cd "$PROJECT_DIR"
           set -o pipefail
           buildozer -v android debug 2>&1 | tee buildozer-ci.log
 
       - name: Verify packaged app contents
         shell: bash
         run: |
-          APK="$(ls -1 "$PROJECT_DIR"/bin/*.apk | tail -n 1)"
+          APK="$(ls -1 bin/*.apk | tail -n 1)"
           test -n "$APK"
           echo "Checking APK: $APK"
 
@@ -111,9 +109,21 @@ jobs:
 
           grep -qx 'main.pyc' private.list
           grep -qx 'database/offlinedata.db' private.list
-          grep -qx 'templates/index.html' private.list
-          grep -qx 'static/css/style.css' private.list
-          grep -qx 'static/js/script.js' private.list
+
+          if ! grep -qx 'templates/index.html' private.list && ! grep -qx 'index.html' private.list; then
+            echo "Missing index template in packaged APK" >&2
+            exit 1
+          fi
+
+          if ! grep -qx 'static/css/style.css' private.list && ! grep -qx 'style.css' private.list; then
+            echo "Missing style.css in packaged APK" >&2
+            exit 1
+          fi
+
+          if ! grep -qx 'static/js/script.js' private.list && ! grep -qx 'script.js' private.list; then
+            echo "Missing script.js in packaged APK" >&2
+            exit 1
+          fi
 
           rm -f private.tar private.list
           echo "APK packaging check passed."
@@ -123,11 +133,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Buildozer-Log
-          path: mobile_app/buildozer-ci.log
+          path: buildozer-ci.log
           if-no-files-found: warn
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Android-APK
-          path: mobile_app/bin/*.apk
+          path: bin/*.apk
