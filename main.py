@@ -402,27 +402,6 @@ def create_flask_app(database_path: Path) -> Flask:
             file=file_key,
             now=datetime.now(),
         )
-
-    @flask_app.route("/guide")
-    def guide():
-        return render_template("guide.html")
-
-    @flask_app.route("/faq")
-    def faq():
-        return render_template("faq.html")
-
-    @flask_app.route("/about")
-    def about():
-        return render_template("about.html")
-
-    @flask_app.route("/contact")
-    def contact():
-        return render_template("contact.html")
-
-    @flask_app.route("/privacy")
-    def privacy():
-        return render_template("privacy.html")
-
     @flask_app.route("/__health")
     def health():
         payload = {
