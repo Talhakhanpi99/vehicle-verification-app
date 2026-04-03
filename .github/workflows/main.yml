@@ -67,7 +67,7 @@ jobs:
 
           root = pathlib.Path('.')
           config_path = root / 'update_config.json'
-          config = json.loads(config_path.read_text(encoding='utf-8'))
+          config = json.loads(config_path.read_text(encoding='utf-8-sig'))
 
           spec_text = (root / 'buildozer.spec').read_text(encoding='utf-8')
           match = re.search(r'^version = (.+)$', spec_text, re.MULTILINE)
