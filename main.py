@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import os
+import re
+import shutil
 import sqlite3
+import threading
 import traceback
+import urllib.error
+import urllib.request
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +25,16 @@ SERVER_HOST = "127.0.0.1"
 SERVER_PORT = int(os.environ.get("PRAAL_PORT", "5000"))
 RUNTIME_LOG_NAME = "praal_startup.log"
 STARTUP_NOTES: list[str] = []
+UPDATE_CONFIG_NAME = "update_config.json"
+UPDATE_STATE_NAME = "update_state.json"
+RUNTIME_DATA_DIR_NAME = "data"
+RUNTIME_UPDATES_DIR_NAME = "updates"
+RUNTIME_OVERRIDE_DIR_NAME = "overrides"
+VERSION_TOKEN_PATTERN = re.compile(r"\d+|[A-Za-z]+")
+UPDATE_THREAD_LOCK = threading.Lock()
+UPDATE_THREAD_STARTED = False
+PACKAGED_UPDATE_CONFIG_PATH = APP_DIR / UPDATE_CONFIG_NAME
+
 
 DISPLAY_ORDER = {
     "AMNESTY": [
@@ -179,6 +196,22 @@ IDENTIFIER_FIELDS = {
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
+def read_packaged_update_config() -> dict:
+    if not PACKAGED_UPDATE_CONFIG_PATH.exists():
+        return {}
+
+    try:
+        payload = json.loads(PACKAGED_UPDATE_CONFIG_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+    return payload if isinstance(payload, dict) else {}
+
+
+PACKAGED_UPDATE_CONFIG = read_packaged_update_config()
+APP_VERSION = str(PACKAGED_UPDATE_CONFIG.get("app_version") or os.environ.get("PRAAL_APP_VERSION", "0.1.0")).strip()
+
+
 def get_runtime_root() -> Path:
     android_private = os.environ.get("ANDROID_PRIVATE")
     if android_private:
@@ -188,6 +221,44 @@ def get_runtime_root() -> Path:
 
     runtime_root.mkdir(parents=True, exist_ok=True)
     return runtime_root
+
+
+def get_runtime_data_root() -> Path:
+    root = get_runtime_root() / RUNTIME_DATA_DIR_NAME
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def get_runtime_updates_root() -> Path:
+    root = get_runtime_root() / RUNTIME_UPDATES_DIR_NAME
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def get_runtime_overrides_root() -> Path:
+    root = get_runtime_root() / RUNTIME_OVERRIDE_DIR_NAME
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def get_runtime_static_override_root() -> Path:
+    return get_runtime_overrides_root() / "static"
+
+
+def get_runtime_database_path() -> Path:
+    return get_runtime_data_root() / PACKAGED_DB_PATH.name
+
+
+def get_staged_database_path() -> Path:
+    return get_runtime_updates_root() / "offlinedata.next.db"
+
+
+def get_update_state_path() -> Path:
+    return get_runtime_root() / UPDATE_STATE_NAME
+
+
+def get_runtime_update_config_path() -> Path:
+    return get_runtime_root() / UPDATE_CONFIG_NAME
 
 
 def append_startup_note(message: str, level: str = "INFO") -> None:
@@ -219,13 +290,294 @@ def display_value(value) -> str:
     return text
 
 
+def normalize_version(value: str) -> str:
+    text = str(value or "").strip()
+    if text[:1].lower() == "v":
+        return text[1:]
+    return text
+
+
+def version_key(value: str):
+    tokens = VERSION_TOKEN_PATTERN.findall(normalize_version(value))
+    if not tokens:
+        return ((0, 0),)
+
+    keyed = []
+    for token in tokens:
+        if token.isdigit():
+            keyed.append((0, int(token)))
+        else:
+            keyed.append((1, token.lower()))
+    return tuple(keyed)
+
+
+def is_version_newer(candidate: str, current: str) -> bool:
+    return version_key(candidate) > version_key(current)
+
+
+def is_app_version_compatible(min_version: str) -> bool:
+    min_version = str(min_version or "").strip()
+    if not min_version:
+        return True
+    return version_key(APP_VERSION) >= version_key(min_version)
+
+
+def default_update_config() -> dict[str, object]:
+    return {
+        "app_version": APP_VERSION,
+        "bundled_database_version": str(PACKAGED_UPDATE_CONFIG.get("bundled_database_version") or "").strip(),
+        "manifest_url": str(PACKAGED_UPDATE_CONFIG.get("manifest_url") or "").strip(),
+        "check_interval_hours": int(PACKAGED_UPDATE_CONFIG.get("check_interval_hours", 12) or 12),
+        "manifest_timeout_seconds": int(PACKAGED_UPDATE_CONFIG.get("manifest_timeout_seconds", 5) or 5),
+        "download_timeout_seconds": int(PACKAGED_UPDATE_CONFIG.get("download_timeout_seconds", 900) or 900),
+        "enable_database_updates": bool(PACKAGED_UPDATE_CONFIG.get("enable_database_updates", True)),
+        "enable_file_updates": bool(PACKAGED_UPDATE_CONFIG.get("enable_file_updates", True)),
+        "enable_apk_update_notice": bool(PACKAGED_UPDATE_CONFIG.get("enable_apk_update_notice", True)),
+        "allowed_file_prefixes": list(PACKAGED_UPDATE_CONFIG.get("allowed_file_prefixes") or ["static/"]),
+    }
+
+
+def load_json_file(path: Path, fallback):
+    if not path.exists():
+        return fallback
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return fallback
+
+    return payload
+
+
+def atomic_write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_suffix(path.suffix + ".tmp")
+    temp_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temp_path.replace(path)
+
+
+def load_update_config() -> dict[str, object]:
+    config = default_update_config()
+
+    packaged_payload = load_json_file(PACKAGED_UPDATE_CONFIG_PATH, {})
+    if isinstance(packaged_payload, dict):
+        config.update(packaged_payload)
+
+    runtime_payload = load_json_file(get_runtime_update_config_path(), {})
+    if isinstance(runtime_payload, dict):
+        config.update(runtime_payload)
+
+    manifest_override = os.environ.get("PRAAL_UPDATE_MANIFEST_URL", "").strip()
+    if manifest_override:
+        config["manifest_url"] = manifest_override
+
+    prefixes = config.get("allowed_file_prefixes")
+    if isinstance(prefixes, list):
+        config["allowed_file_prefixes"] = [str(item).replace("\\", "/").strip() for item in prefixes if str(item).strip()]
+    else:
+        config["allowed_file_prefixes"] = ["static/"]
+
+    for key, fallback in {
+        "check_interval_hours": 12,
+        "manifest_timeout_seconds": 5,
+        "download_timeout_seconds": 900,
+    }.items():
+        try:
+            config[key] = max(1, int(config.get(key, fallback)))
+        except Exception:
+            config[key] = fallback
+
+    for key in ("enable_database_updates", "enable_file_updates", "enable_apk_update_notice"):
+        config[key] = bool(config.get(key, True))
+
+    config["app_version"] = str(config.get("app_version") or APP_VERSION).strip()
+    config["bundled_database_version"] = str(config.get("bundled_database_version") or "").strip()
+    config["manifest_url"] = str(config.get("manifest_url") or "").strip()
+    return config
+
+
+def default_update_state() -> dict[str, object]:
+    return {
+        "database": {
+            "version": None,
+            "staged_version": None,
+            "seeded_at": None,
+            "last_staged_at": None,
+            "last_applied_at": None,
+        },
+        "files": {},
+        "apk_notice": {
+            "version": None,
+            "url": None,
+            "notes": None,
+            "released_at": None,
+        },
+        "last_checked_at": None,
+        "last_manifest_url": None,
+        "last_error": None,
+    }
+
+
+def load_update_state() -> dict[str, object]:
+    state = default_update_state()
+    payload = load_json_file(get_update_state_path(), {})
+    if not isinstance(payload, dict):
+        return state
+
+    database_state = payload.get("database")
+    if isinstance(database_state, dict):
+        state["database"].update(database_state)
+
+    files_state = payload.get("files")
+    if isinstance(files_state, dict):
+        state["files"] = files_state
+
+    apk_notice = payload.get("apk_notice")
+    if isinstance(apk_notice, dict):
+        state["apk_notice"].update(apk_notice)
+
+    for key in ("last_checked_at", "last_manifest_url", "last_error"):
+        state[key] = payload.get(key)
+
+    return state
+
+
+def save_update_state(state: dict[str, object]) -> None:
+    atomic_write_json(get_update_state_path(), state)
+
+
+def parse_timestamp(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def should_check_for_updates(config: dict[str, object], state: dict[str, object]) -> bool:
+    manifest_url = str(config.get("manifest_url") or "").strip()
+    if not manifest_url:
+        return False
+
+    last_checked_at = parse_timestamp(str(state.get("last_checked_at") or ""))
+    if last_checked_at is None:
+        return True
+
+    interval_hours = int(config.get("check_interval_hours", 12))
+    elapsed = datetime.now() - last_checked_at
+    return elapsed.total_seconds() >= interval_hours * 3600
+
+
+def calculate_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def sanitize_relative_update_path(value: str) -> str | None:
+    normalized = str(value or "").replace("\\", "/").strip().lstrip("/")
+    if not normalized:
+        return None
+
+    path = Path(normalized)
+    if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+        return None
+
+    return "/".join(path.parts)
+
+
+def is_allowed_update_path(path: str, allowed_prefixes: list[str]) -> str | None:
+    normalized = sanitize_relative_update_path(path)
+    if not normalized:
+        return None
+
+    for prefix in allowed_prefixes:
+        prefix_normalized = sanitize_relative_update_path(prefix)
+        if not prefix_normalized:
+            continue
+        if normalized == prefix_normalized or normalized.startswith(prefix_normalized + "/"):
+            return normalized
+    return None
+
+
+def open_url(url: str, timeout_seconds: int):
+    request_obj = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": f"PRAAL-Mobile/{APP_VERSION}",
+            "Accept": "application/json,application/octet-stream,*/*",
+        },
+    )
+    return urllib.request.urlopen(request_obj, timeout=timeout_seconds)
+
+
+def fetch_remote_json(url: str, timeout_seconds: int) -> dict:
+    with open_url(url, timeout_seconds) as response:
+        payload = response.read()
+
+    data = json.loads(payload.decode("utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("Update manifest must be a JSON object.")
+    return data
+
+
+def download_url_to_path(url: str, destination: Path, timeout_seconds: int) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = destination.with_suffix(destination.suffix + ".download")
+
+    try:
+        with open_url(url, timeout_seconds) as response, temp_path.open("wb") as handle:
+            for chunk in iter(lambda: response.read(1024 * 1024), b""):
+                handle.write(chunk)
+        temp_path.replace(destination)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink(missing_ok=True)
+
+
+def apply_staged_database(state: dict[str, object], config: dict[str, object]) -> tuple[Path, bool]:
+    runtime_database_path = get_runtime_database_path()
+    staged_database_path = get_staged_database_path()
+    database_state = state["database"]
+    changed = False
+
+    if staged_database_path.exists() and database_state.get("staged_version"):
+        runtime_database_path.parent.mkdir(parents=True, exist_ok=True)
+        if runtime_database_path.exists():
+            runtime_database_path.unlink()
+        staged_database_path.replace(runtime_database_path)
+        database_state["version"] = database_state.get("staged_version")
+        database_state["staged_version"] = None
+        database_state["last_applied_at"] = datetime.now().isoformat(timespec="seconds")
+        changed = True
+        append_startup_note(f"Applied staged database update: {runtime_database_path}")
+
+    if not runtime_database_path.exists() and PACKAGED_DB_PATH.exists():
+        runtime_database_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(PACKAGED_DB_PATH, runtime_database_path)
+        if not database_state.get("version"):
+            database_state["version"] = str(config.get("bundled_database_version") or "").strip() or None
+        database_state["seeded_at"] = datetime.now().isoformat(timespec="seconds")
+        changed = True
+        append_startup_note(f"Seeded runtime database from packaged copy: {runtime_database_path}")
+    elif runtime_database_path.exists() and not database_state.get("version"):
+        bundled_version = str(config.get("bundled_database_version") or "").strip()
+        if bundled_version:
+            database_state["version"] = bundled_version
+            changed = True
+
+    return runtime_database_path, changed
+
+
 def detect_template_roots() -> list[Path]:
     roots: list[Path] = []
     standard = APP_DIR / "templates"
     if (standard / "index.html").exists():
         roots.append(standard)
 
-    # Fallback for flattened packaging where templates are at app root.
     if (APP_DIR / "index.html").exists():
         roots.append(APP_DIR)
 
@@ -234,11 +586,12 @@ def detect_template_roots() -> list[Path]:
 
 def detect_static_roots() -> list[Path]:
     roots: list[Path] = []
+    roots.append(get_runtime_static_override_root())
+
     standard = APP_DIR / "static"
     if standard.exists():
         roots.append(standard)
 
-    # Fallback for flattened packaging where css/js files are at app root.
     root_assets = ["style.css", "script.js", "offline_bootstrap.css", "offline_ui.js"]
     if any((APP_DIR / name).exists() for name in root_assets):
         roots.append(APP_DIR)
@@ -247,11 +600,16 @@ def detect_static_roots() -> list[Path]:
 
 
 def select_database_path() -> Path:
-    candidates = [PACKAGED_DB_PATH, APP_DIR / "offlinedata.db"]
+    config = load_update_config()
+    state = load_update_state()
+    runtime_database_path, changed = apply_staged_database(state, config)
 
+    candidates = [runtime_database_path, PACKAGED_DB_PATH, APP_DIR / "offlinedata.db"]
     for path in candidates:
         if path.exists():
             append_startup_note(f"Database candidate found: {path} ({path.stat().st_size} bytes)")
+            if changed:
+                save_update_state(state)
             return path
 
     raise FileNotFoundError(
@@ -262,11 +620,13 @@ def select_database_path() -> Path:
 def startup_summary(database_path: Path, template_roots: list[Path], static_roots: list[Path]) -> dict:
     summary: dict[str, object] = {
         "app_dir": str(APP_DIR),
+        "app_version": APP_VERSION,
         "database_path": str(database_path),
         "database_exists": database_path.exists(),
         "database_size": database_path.stat().st_size if database_path.exists() else None,
         "template_roots": [str(path) for path in template_roots],
         "static_roots": [str(path) for path in static_roots],
+        "runtime_root": str(get_runtime_root()),
         "app_dir_entries": sorted(path.name for path in APP_DIR.iterdir()) if APP_DIR.exists() else [],
     }
 
@@ -278,6 +638,184 @@ def startup_summary(database_path: Path, template_roots: list[Path], static_root
         summary["runtime_free_bytes"] = None
 
     return summary
+
+
+def update_apk_notice_from_manifest(manifest: dict, state: dict[str, object], enabled: bool) -> None:
+    notice = state["apk_notice"]
+    app_payload = manifest.get("app")
+    if not enabled or not isinstance(app_payload, dict):
+        notice.update({"version": None, "url": None, "notes": None, "released_at": None})
+        return
+
+    version = str(app_payload.get("version") or "").strip()
+    url = str(app_payload.get("url") or "").strip()
+    notes = str(app_payload.get("notes") or "").strip() or None
+    released_at = str(app_payload.get("released_at") or "").strip() or None
+
+    if version and url and is_version_newer(version, APP_VERSION):
+        notice.update({
+            "version": version,
+            "url": url,
+            "notes": notes,
+            "released_at": released_at,
+        })
+    else:
+        notice.update({"version": None, "url": None, "notes": None, "released_at": None})
+
+
+def stage_database_update(manifest: dict, state: dict[str, object], config: dict[str, object]) -> None:
+    database_payload = manifest.get("database")
+    if not isinstance(database_payload, dict):
+        return
+
+    remote_version = str(database_payload.get("version") or "").strip()
+    remote_url = str(database_payload.get("url") or "").strip()
+    expected_hash = str(database_payload.get("sha256") or "").strip().lower()
+    min_app_version = str(database_payload.get("min_app_version") or manifest.get("minimum_app_version") or "").strip()
+
+    if not remote_version or not remote_url:
+        return
+
+    if not is_app_version_compatible(min_app_version):
+        append_startup_note(
+            f"Skipped database update {remote_version}; app version {APP_VERSION} is below required {min_app_version}.",
+            level="INFO",
+        )
+        return
+
+    database_state = state["database"]
+    local_version = str(
+        database_state.get("staged_version")
+        or database_state.get("version")
+        or config.get("bundled_database_version")
+        or ""
+    ).strip()
+
+    if local_version and not is_version_newer(remote_version, local_version):
+        return
+
+    staged_database_path = get_staged_database_path()
+    staged_database_path.parent.mkdir(parents=True, exist_ok=True)
+    download_url_to_path(remote_url, staged_database_path, int(config.get("download_timeout_seconds", 900)))
+
+    if expected_hash:
+        actual_hash = calculate_sha256(staged_database_path)
+        if actual_hash.lower() != expected_hash:
+            staged_database_path.unlink(missing_ok=True)
+            raise ValueError("Downloaded database hash does not match the manifest sha256.")
+
+    database_state["staged_version"] = remote_version
+    database_state["last_staged_at"] = datetime.now().isoformat(timespec="seconds")
+    append_startup_note(f"Staged new database version {remote_version} for next app launch.")
+
+
+def process_file_updates(manifest: dict, state: dict[str, object], config: dict[str, object]) -> None:
+    files_payload = manifest.get("files")
+    if not isinstance(files_payload, list):
+        return
+
+    allowed_prefixes = list(config.get("allowed_file_prefixes") or ["static/"])
+    runtime_overrides = get_runtime_overrides_root()
+    runtime_overrides.mkdir(parents=True, exist_ok=True)
+
+    for entry in files_payload:
+        if not isinstance(entry, dict):
+            continue
+
+        relative_path = is_allowed_update_path(str(entry.get("path") or ""), allowed_prefixes)
+        if not relative_path:
+            continue
+
+        version = str(entry.get("version") or "").strip()
+        url = str(entry.get("url") or "").strip()
+        expected_hash = str(entry.get("sha256") or "").strip().lower()
+        min_app_version = str(entry.get("min_app_version") or manifest.get("minimum_app_version") or "").strip()
+
+        if not version or not url or not is_app_version_compatible(min_app_version):
+            continue
+
+        local_file_state = state["files"].get(relative_path, {})
+        local_version = str(local_file_state.get("version") or "").strip()
+        if local_version and not is_version_newer(version, local_version):
+            continue
+
+        target_path = runtime_overrides / Path(relative_path)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        download_url_to_path(url, target_path, int(config.get("download_timeout_seconds", 900)))
+
+        if expected_hash:
+            actual_hash = calculate_sha256(target_path)
+            if actual_hash.lower() != expected_hash:
+                target_path.unlink(missing_ok=True)
+                raise ValueError(f"Downloaded file hash mismatch for {relative_path}.")
+
+        state["files"][relative_path] = {
+            "version": version,
+            "updated_at": datetime.now().isoformat(timespec="seconds"),
+        }
+        append_startup_note(f"Updated runtime file override: {relative_path} ({version})")
+
+
+def run_update_cycle() -> None:
+    global UPDATE_THREAD_STARTED
+
+    config = load_update_config()
+    state = load_update_state()
+    manifest_url = str(config.get("manifest_url") or "").strip()
+
+    try:
+        if not manifest_url:
+            append_startup_note("Update check skipped because manifest_url is not configured.")
+            return
+
+        append_startup_note(f"Checking remote manifest: {manifest_url}")
+        manifest = fetch_remote_json(manifest_url, int(config.get("manifest_timeout_seconds", 5)))
+        update_apk_notice_from_manifest(manifest, state, bool(config.get("enable_apk_update_notice", True)))
+
+        if bool(config.get("enable_database_updates", True)):
+            stage_database_update(manifest, state, config)
+
+        if bool(config.get("enable_file_updates", True)):
+            process_file_updates(manifest, state, config)
+
+        state["last_error"] = None
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError, OSError) as error:
+        state["last_error"] = f"{type(error).__name__}: {error}"
+        append_startup_note(f"Remote update check failed: {error}", level="ERROR")
+    except Exception as error:
+        state["last_error"] = f"{type(error).__name__}: {error}"
+        append_startup_note(f"Unexpected update failure: {error}", level="ERROR")
+    finally:
+        state["last_checked_at"] = datetime.now().isoformat(timespec="seconds")
+        state["last_manifest_url"] = manifest_url
+        save_update_state(state)
+        with UPDATE_THREAD_LOCK:
+            UPDATE_THREAD_STARTED = False
+
+
+def start_background_update_check() -> None:
+    global UPDATE_THREAD_STARTED
+
+    config = load_update_config()
+    state = load_update_state()
+    manifest_url = str(config.get("manifest_url") or "").strip()
+
+    if not manifest_url:
+        append_startup_note("Remote updater is disabled until manifest_url is configured.")
+        return
+
+    if not should_check_for_updates(config, state):
+        append_startup_note("Remote update check skipped because the last check is still fresh.")
+        return
+
+    with UPDATE_THREAD_LOCK:
+        if UPDATE_THREAD_STARTED:
+            return
+        UPDATE_THREAD_STARTED = True
+
+    worker = threading.Thread(target=run_update_cycle, name="praal-update-worker", daemon=True)
+    worker.start()
+    append_startup_note("Remote update worker started.")
 
 
 def create_flask_app(database_path: Path) -> Flask:
@@ -298,6 +836,30 @@ def create_flask_app(database_path: Path) -> Flask:
 
     append_startup_note(f"Using template roots: {[str(path) for path in template_roots]}")
     append_startup_note(f"Using static roots: {[str(path) for path in static_roots]}")
+
+    @flask_app.context_processor
+    def inject_update_context() -> dict[str, object]:
+        state = load_update_state()
+        apk_notice = state.get("apk_notice", {})
+        database_state = state.get("database", {})
+        available_version = str(apk_notice.get("version") or "").strip()
+        download_url = str(apk_notice.get("url") or "").strip()
+
+        return {
+            "app_version": APP_VERSION,
+            "apk_update_notice": {
+                "available": bool(available_version and download_url and is_version_newer(available_version, APP_VERSION)),
+                "version": available_version,
+                "url": download_url,
+                "notes": apk_notice.get("notes"),
+                "released_at": apk_notice.get("released_at"),
+            },
+            "database_update_status": {
+                "current_version": database_state.get("version"),
+                "staged": bool(database_state.get("staged_version")),
+                "staged_version": database_state.get("staged_version"),
+            },
+        }
 
     def get_db() -> sqlite3.Connection:
         if "db" not in g:
@@ -402,15 +964,32 @@ def create_flask_app(database_path: Path) -> Flask:
             file=file_key,
             now=datetime.now(),
         )
+
     @flask_app.route("/__health")
     def health():
         payload = {
             "status": "ok",
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "summary": flask_app.config.get("STARTUP_SUMMARY", {}),
+            "update_state": load_update_state(),
+            "update_config": {
+                key: value
+                for key, value in load_update_config().items()
+                if key != "download_timeout_seconds"
+            },
             "notes": STARTUP_NOTES[-80:],
         }
         return jsonify(payload)
+
+    @flask_app.route("/__update-status")
+    def update_status():
+        return jsonify(
+            {
+                "app_version": APP_VERSION,
+                "config": load_update_config(),
+                "state": load_update_state(),
+            }
+        )
 
     return flask_app
 
@@ -537,6 +1116,7 @@ def create_failure_app(error: Exception, trace_text: str) -> Flask:
             {
                 "status": "failed",
                 "error": f"{type(error).__name__}: {error}",
+                "update_state": load_update_state(),
                 "notes": STARTUP_NOTES[-80:],
                 "traceback": trace_text,
             }
@@ -551,6 +1131,7 @@ append_startup_note(f"Android private path: {os.environ.get('ANDROID_PRIVATE', '
 try:
     DATABASE_PATH = select_database_path()
     app = create_flask_app(DATABASE_PATH)
+    start_background_update_check()
     append_startup_note("Application initialized successfully.")
 except Exception as startup_error:
     startup_traceback = traceback.format_exc()
@@ -560,4 +1141,3 @@ except Exception as startup_error:
 
 if __name__ == "__main__":
     app.run(host=SERVER_HOST, port=SERVER_PORT, debug=False, use_reloader=False, threaded=True)
-
