@@ -21,7 +21,7 @@ body {
 
 .bismillah {
     display: block;
-    font-size: clamp(0.95rem, 3.8vw, 2.3rem);
+    font-size: clamp(1.35rem, 5vw, 3.3rem);
     font-weight: bold;
     line-height: 1.2;
     margin-bottom: 0.35rem;
@@ -191,7 +191,7 @@ h6 i,
     }
 
     .bismillah {
-        font-size: clamp(0.9rem, 4vw, 1.4rem);
+        font-size: clamp(1.1rem, 5vw, 2rem);
     }
 
     .display-4 {
