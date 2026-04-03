@@ -2,8 +2,8 @@
   "minimum_app_version": "0.1.0",
   "app": {
     "version": "0.1.0",
-    "url": "",
-    "notes": "",
+    "url": "https://github.com/Talhakhanpi99/vehicle-verification-app/releases",
+    "notes": "Initial release with offline database support.",
     "released_at": "2026-04-03T12:00:00Z"
   },
   "database": {
