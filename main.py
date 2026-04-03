@@ -557,7 +557,7 @@ def apply_staged_database(state: dict[str, object], config: dict[str, object]) -
 
     if not runtime_database_path.exists() and PACKAGED_DB_PATH.exists():
         runtime_database_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(PACKAGED_DB_PATH, runtime_database_path)
+        shutil.copy(PACKAGED_DB_PATH, runtime_database_path)
         if not database_state.get("version"):
             database_state["version"] = str(config.get("bundled_database_version") or "").strip() or None
         database_state["seeded_at"] = datetime.now().isoformat(timespec="seconds")
