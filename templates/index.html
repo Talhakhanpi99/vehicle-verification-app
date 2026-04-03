@@ -14,118 +14,128 @@
 <body class="fade-in">
     <div class="container-fluid bg-primary text-white text-center py-4">
         <div class="bismillah" lang="ar" dir="rtl">بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ</div>
-        <h1 class="display-4 fw-bold mt-2">Collectorate of Customs</h1>
-        <h2 class="h3 fw-light">Vehicle Verification Portal</h2>
+        <h1 class="display-4 fw-bold portal-title">Collectorate of Customs</h1>
+        <h2 class="h3 fw-light portal-subtitle">Vehicle Verification Portal</h2>
         <h3 class="h3 fw-light update-info">
             <small>Updated Till 15 OCT 2023</small>
         </h3>
     </div>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container justify-content-center">
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/">Home</a>
-                </li>
-            </ul>
+    {% if apk_update_notice.available %}
+    <div class="page-shell">
+        <div class="alert alert-info shadow-sm mt-3 mb-0 update-banner" role="alert">
+            <div class="fw-semibold">A newer app version {{ apk_update_notice.version }} is available.</div>
+            {% if apk_update_notice.notes %}<div class="small mt-1">{{ apk_update_notice.notes }}</div>{% endif %}
+            <a href="{{ apk_update_notice.url }}" class="btn btn-primary btn-sm mt-2">Download App Update</a>
         </div>
-    </nav>
+    </div>
+    {% endif %}
 
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-lg">
-                <div class="card-body">
-                    <div class="search-section">
-                        <h5 class="search-title"><i class="fas fa-search me-2"></i>Search by Chassis No.</h5>
-                        <form action="/search" method="POST" class="search-form">
-                            <input type="hidden" name="search_type" value="chassis">
-                            <div class="input-group">
-                                <input type="text" name="chassis_number" class="form-control" placeholder="Enter Chassis Number">
-                                <button type="submit" class="btn btn-success">Search</button>
-                            </div>
-                        </form>
-                    </div>
+    {% if database_update_status.staged %}
+    <div class="page-shell">
+        <div class="alert alert-success shadow-sm mt-3 mb-0 update-banner" role="alert">
+            New records were downloaded and will be used next time the app opens.
+        </div>
+    </div>
+    {% endif %}
 
-                    <div class="search-section">
-                        <h5 class="search-title"><i class="fas fa-file-alt me-2"></i>Search by GD Number</h5>
-                        <form action="/search" method="POST" class="search-form">
-                            <input type="hidden" name="search_type" value="gd_no_date">
-                            <div class="row g-2">
-                                <div class="col-md-4">
-                                    <input type="text" name="cltcod" class="form-control format-placeholder" placeholder="KAPR">
+    <div class="page-shell">
+        <div class="row justify-content-center g-0">
+            <div class="col-lg-8">
+                <div class="card shadow-lg">
+                    <div class="card-body">
+                        <div class="search-section">
+                            <h5 class="search-title"><i class="fas fa-search me-2"></i>Search by Chassis No.</h5>
+                            <form action="/search" method="POST" class="search-form">
+                                <input type="hidden" name="search_type" value="chassis">
+                                <div class="input-group">
+                                    <input type="text" name="chassis_number" class="form-control" placeholder="Enter Chassis Number">
+                                    <button type="submit" class="btn btn-success">Search</button>
                                 </div>
-                                <div class="col-md-4">
-                                    <input type="text" name="betype" class="form-control format-placeholder" placeholder="HC">
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="input-group">
-                                        <input type="text" name="mchnum" class="form-control format-placeholder" placeholder="123456">
-                                        <button type="submit" class="btn btn-success">Search</button>
+                            </form>
+                        </div>
+
+                        <div class="search-section">
+                            <h5 class="search-title"><i class="fas fa-file-alt me-2"></i>Search by GD Number</h5>
+                            <form action="/search" method="POST" class="search-form">
+                                <input type="hidden" name="search_type" value="gd_no_date">
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <input type="text" name="cltcod" class="form-control format-placeholder" placeholder="KAPR">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" name="betype" class="form-control format-placeholder" placeholder="HC">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="input-group">
+                                            <input type="text" name="mchnum" class="form-control format-placeholder" placeholder="123456">
+                                            <button type="submit" class="btn btn-success">Search</button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </form>
-                    </div>
+                            </form>
+                        </div>
 
-                    <div class="search-section">
-                        <h5 class="search-title"><i class="fas fa-truck-loading me-2"></i>Search by IGM Number</h5>
-                        <form action="/search" method="POST" class="search-form">
-                            <input type="hidden" name="search_type" value="igm_no_date">
-                            <div class="row g-2">
-                                <div class="col-md-4">
-                                    <input type="text" name="igm_no" class="form-control" placeholder="1234">
-                                </div>
-                                <div class="col-md-4">
-                                    <input type="text" name="igm_index" class="form-control" placeholder="1234">
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="input-group">
-                                        <input type="text" name="igm_year" class="form-control" placeholder="2000">
-                                        <button type="submit" class="btn btn-success">Search</button>
+                        <div class="search-section">
+                            <h5 class="search-title"><i class="fas fa-truck-loading me-2"></i>Search by IGM Number</h5>
+                            <form action="/search" method="POST" class="search-form">
+                                <input type="hidden" name="search_type" value="igm_no_date">
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <input type="text" name="igm_no" class="form-control" placeholder="1234">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" name="igm_index" class="form-control" placeholder="1234">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="input-group">
+                                            <input type="text" name="igm_year" class="form-control" placeholder="2000">
+                                            <button type="submit" class="btn btn-success">Search</button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </form>
-                    </div>
+                            </form>
+                        </div>
 
-                    <div class="search-section">
-                        <h5 class="search-title"><i class="fas fa-ship me-2"></i>Search by Bill of Lading Number</h5>
-                        <form action="/search" method="POST" class="search-form">
-                            <input type="hidden" name="search_type" value="bl_no">
-                            <div class="input-group">
-                                <input type="text" name="bl_no" class="form-control" placeholder="1234567890">
-                                <button type="submit" class="btn btn-success">Search</button>
-                            </div>
-                        </form>
-                    </div>
+                        <div class="search-section">
+                            <h5 class="search-title"><i class="fas fa-ship me-2"></i>Search by Bill of Lading Number</h5>
+                            <form action="/search" method="POST" class="search-form">
+                                <input type="hidden" name="search_type" value="bl_no">
+                                <div class="input-group">
+                                    <input type="text" name="bl_no" class="form-control" placeholder="1234567890">
+                                    <button type="submit" class="btn btn-success">Search</button>
+                                </div>
+                            </form>
+                        </div>
 
-                    <div class="search-section">
-                        <h5 class="search-title"><i class="fas fa-clipboard-check me-2"></i>Search by Order In Original Number (For Amnesty)</h5>
-                        <form action="/search" method="POST" class="search-form">
-                            <input type="hidden" name="search_type" value="ono_no">
-                            <div class="input-group">
-                                <input type="text" name="ono_no" class="form-control" placeholder="Order In Original Number">
-                                <button type="submit" class="btn btn-success">Search</button>
-                            </div>
-                        </form>
-                    </div>
+                        <div class="search-section">
+                            <h5 class="search-title"><i class="fas fa-clipboard-check me-2"></i>Search by Order In Original Number (For Amnesty)</h5>
+                            <form action="/search" method="POST" class="search-form">
+                                <input type="hidden" name="search_type" value="ono_no">
+                                <div class="input-group">
+                                    <input type="text" name="ono_no" class="form-control" placeholder="Order In Original Number">
+                                    <button type="submit" class="btn btn-success">Search</button>
+                                </div>
+                            </form>
+                        </div>
 
-                    <div class="search-section">
-                        <h5 class="search-title"><i class="fas fa-file-invoice me-2"></i>Search by Delivery Order Number (For Amnesty)</h5>
-                        <form action="/search" method="POST" class="search-form">
-                            <input type="hidden" name="search_type" value="delivery_order_no">
-                            <div class="input-group">
-                                <input type="text" name="delivery_order_no" class="form-control" placeholder="Delivery Order Number">
-                                <button type="submit" class="btn btn-success">Search</button>
-                            </div>
-                        </form>
-                    </div>
+                        <div class="search-section">
+                            <h5 class="search-title"><i class="fas fa-file-invoice me-2"></i>Search by Delivery Order Number (For Amnesty)</h5>
+                            <form action="/search" method="POST" class="search-form">
+                                <input type="hidden" name="search_type" value="delivery_order_no">
+                                <div class="input-group">
+                                    <input type="text" name="delivery_order_no" class="form-control" placeholder="Delivery Order Number">
+                                    <button type="submit" class="btn btn-success">Search</button>
+                                </div>
+                            </form>
+                        </div>
 
-                    <div class="search-section">
-                        <h5 class="search-title"><i class="fas fa-layer-group me-2"></i>Combined Search</h5>
-                        <button type="button" id="combinedSearchBtn" class="btn btn-primary w-100">
-                            <i class="fas fa-search me-2"></i>Combined Search
-                        </button>
+                        <div class="search-section">
+                            <h5 class="search-title"><i class="fas fa-layer-group me-2"></i>Combined Search</h5>
+                            <button type="button" id="combinedSearchBtn" class="btn btn-primary w-100 action-btn">
+                                <i class="fas fa-search me-2"></i>Combined Search
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -141,7 +151,7 @@
                     <p><small>Contact: 03108022930</small></p>
                 </div>
                 <div class="col-md-6 text-end">
-                    <p class="mb-0">Collectorate of Customs Vehicle Verification Portal</p>
+                    <p class="mb-0 footer-portal-text">Collectorate of Customs<br>Vehicle Verification Portal</p>
                 </div>
             </div>
         </div>
