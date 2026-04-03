@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -22,16 +22,26 @@
                 </div>
                 <div class="col-md-6 text-end">
                     <h4 class="mb-0">Search Results</h4>
-                    <small>{{ results|length }} result(s) found</small>
+                    <small>{{ results|length }} results found</small>
                 </div>
             </div>
         </div>
     </div>
 
+    {% if apk_update_notice.available %}
+    <div class="page-shell">
+        <div class="alert alert-info shadow-sm mt-3 mb-0 update-banner" role="alert">
+            <div class="fw-semibold">A newer app version {{ apk_update_notice.version }} is available.</div>
+            {% if apk_update_notice.notes %}<div class="small mt-1">{{ apk_update_notice.notes }}</div>{% endif %}
+            <a href="{{ apk_update_notice.url }}" class="btn btn-primary btn-sm mt-2">Download App Update</a>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row mt-4">
         <div class="col-12 text-center text-light">
             <h1 class="display-4">Search Results</h1>
-            <p class="lead">Found {{ results|length }} result(s) for your query.</p>
+            <p class="lead">Found {{ results|length }} results for your query.</p>
         </div>
     </div>
 
