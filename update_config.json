@@ -1,0 +1,14 @@
+﻿{
+  "app_version": "0.1.0",
+  "bundled_database_version": "2026.04.01.1",
+  "manifest_url": "",
+  "check_interval_hours": 12,
+  "manifest_timeout_seconds": 5,
+  "download_timeout_seconds": 900,
+  "enable_database_updates": true,
+  "enable_file_updates": true,
+  "enable_apk_update_notice": true,
+  "allowed_file_prefixes": [
+    "static/"
+  ]
+}
