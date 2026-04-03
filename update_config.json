@@ -1,6 +1,6 @@
 {
   "app_version": "0.1.0",
-  "bundled_database_version": "2026.04.01.1",
+  "bundled_database_version": "2026.04.03.1",
   "manifest_url": "https://talhakhanpi99.github.io/vehicle-verification-app/praal-update.json",
   "check_interval_hours": 12,
   "manifest_timeout_seconds": 5,
