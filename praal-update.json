@@ -1,0 +1,16 @@
+{
+  "minimum_app_version": "0.1.0",
+  "app": {
+    "version": "0.1.0",
+    "url": "",
+    "notes": "",
+    "released_at": "2026-04-03T12:00:00Z"
+  },
+  "database": {
+    "version": "2026.04.03.1",
+    "url": "https://YOUR-DIRECT-DOWNLOAD-LINK/offlinedata.db",
+    "sha256": "PUT_REAL_SHA256_HERE",
+    "min_app_version": "0.1.0"
+  },
+  "files": []
+}
