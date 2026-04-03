@@ -21,12 +21,13 @@ jobs:
           test -f "templates/index.html"
           test -f "static/css/style.css"
           test -f "static/js/script.js"
+          test -f "update_config.json"
           echo "Using repository root as Android project directory"
 
       - name: Print source file hashes
         shell: bash
         run: |
-          sha256sum main.py buildozer.spec templates/index.html static/css/style.css static/js/script.js
+          sha256sum main.py buildozer.spec templates/index.html static/css/style.css static/js/script.js update_config.json
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -52,6 +53,39 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install --upgrade buildozer "cython<3.0" virtualenv gdown
+
+      - name: Prepare update config
+        shell: bash
+        env:
+          PRAAL_UPDATE_MANIFEST_URL: ${{ vars.PRAAL_UPDATE_MANIFEST_URL }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+
+          root = pathlib.Path('.')
+          config_path = root / 'update_config.json'
+          config = json.loads(config_path.read_text(encoding='utf-8'))
+
+          spec_text = (root / 'buildozer.spec').read_text(encoding='utf-8')
+          match = re.search(r'^version = (.+)$', spec_text, re.MULTILINE)
+          if not match:
+              raise SystemExit('buildozer.spec version not found')
+
+          app_version = match.group(1).strip()
+          owner, repo = os.environ['GITHUB_REPOSITORY'].split('/', 1)
+          default_manifest_url = f'https://{owner}.github.io/{repo}/praal-update.json'
+
+          config['app_version'] = app_version
+          config['manifest_url'] = os.environ.get('PRAAL_UPDATE_MANIFEST_URL', '').strip() or config.get('manifest_url', '').strip() or default_manifest_url
+
+          config_path.write_text(json.dumps(config, indent=2) + '\n', encoding='utf-8')
+          print('Prepared update_config.json')
+          print(f"app_version={config['app_version']}")
+          print(f"manifest_url={config['manifest_url']}")
+          PY
 
       - name: Prepare database directory
         shell: bash
@@ -107,6 +141,7 @@ jobs:
 
           grep -qx 'main.pyc' private.list
           grep -qx 'database/offlinedata.db' private.list
+          grep -qx 'update_config.json' private.list
 
           if ! grep -qx 'templates/index.html' private.list && ! grep -qx 'index.html' private.list; then
             echo "Missing index template in packaged APK" >&2
