@@ -7,7 +7,7 @@ source.include_exts = py,kv,png,jpg,jpeg,txt,html,css,js,json,db,sqlite
 source.exclude_dirs = .buildozer,bin
 version = 0.1.0
 icon.filename = static/img/icon.png
-requirements = python3,flask,werkzeug==2.0.3,sqlite3
+requirements = python3,flask==2.0.3,werkzeug==2.0.3,sqlite3
 orientation = portrait
 fullscreen = 1
 android.permissions = INTERNET
