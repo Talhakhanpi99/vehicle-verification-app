@@ -53,6 +53,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install --upgrade buildozer "cython<3.0" virtualenv gdown
+          pip install --upgrade gdown
 
       - name: Prepare update config
         shell: bash
@@ -103,8 +104,13 @@ jobs:
             DB_URL="$DEFAULT_DB_URL"
           fi
 
+          # If the secret/variable exists but is an empty string, fallback to default
+          if [ -z "$DB_URL" ] || [ "$DB_URL" = '""' ] || [ "$DB_URL" = '""' ]; then
+            DB_URL="${{ env.DEFAULT_DB_URL }}"
+          fi
+
           if [[ "$DB_URL" == *"drive.google.com"* ]]; then
-            gdown --fuzzy "$DB_URL" -O database/offlinedata.db
+            gdown "$DB_URL" -O database/offlinedata.db
           else
             curl -L "$DB_URL" -o database/offlinedata.db
           fi
