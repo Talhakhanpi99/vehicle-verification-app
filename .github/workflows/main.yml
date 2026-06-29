@@ -7,7 +7,7 @@ jobs:
   build-android:
     runs-on: ubuntu-22.04
     env:
-      DEFAULT_DB_URL: "https://drive.google.com/file/d/1CkiJBrY70w6-hfJ75MWgumUhZnlYrsPj/view?usp=sharing"
+      DEFAULT_DB_URL: "https://drive.google.com/file/d/1Cd4-dde7XBtoPw_B3CCDLI3swigs8d_f/view?usp=sharing"
 
     steps:
       - name: Checkout code
